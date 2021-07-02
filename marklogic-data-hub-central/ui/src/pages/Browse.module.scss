@@ -4,9 +4,28 @@
 
 .content {
   background: #fff;
-  padding: 20px 24px 34px 36px;
-  width: 100%;
+  padding: 60px 24px 34px 26px;
   max-height: 100vh;
+}
+
+.stickyHeader{
+  position: absolute;
+  background-color: #fff;
+  z-index: 1;
+  margin-top: -60px;
+  padding-top: 10px;
+  padding-right: 30px;
+  width: 77%;
+}
+
+.stickyHeaderCollapsed{
+  position: absolute;
+  background-color: #fff;
+  z-index: 1;
+  margin-top: -60px;
+  padding-top: 10px;
+  padding-right: 30px;
+  width: 100%;
 }
 
 .sideBarFacets {
@@ -28,14 +47,19 @@
 }
 
 .viewContainer {
-  padding-top: 5px;
+  padding-top: 120px;
 }
 
 .snippetViewResult {
+  padding-top: 10px;
+  margin-top: 40px;
   border-top: 1px solid #d0d1d5;
   border-bottom: 1px solid #d0d1d5;
-  max-height: 55vh;
-  overflow: auto;
+}
+
+.tableViewResult {
+  overflow: hidden;
+  overflow-x: scroll;
 }
 
 .switchViews {
@@ -47,7 +71,7 @@
 .sideBarExpanded {
   position: absolute;
   margin-left: auto;
-  margin-right: auto;
+  margin-right: 50px;
   left: 0;
   right: 0;
   z-index: 999;
@@ -56,7 +80,7 @@
 .sideBarCollapsed {
   position: absolute;
   margin-left: auto;
-  margin-right: auto;
+  margin-right: 363px;
   left: 336px;
   right: 0;
   z-index: 999;
@@ -70,11 +94,13 @@
   width: 21px;
   height: 28px;
   line-height: 28px;
-  margin-left: -36px;
-  margin-top: -20px;
+  margin-left: -26px;
+  margin-top: -60px;
+  margin-bottom: 60px;
   background-color: #e8e8e8;
   border-radius: 0px 5px 5px 0px;
   text-align: center;
   vertical-align: middle;
   cursor: pointer;
+  position: fixed;
 }
