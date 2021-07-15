@@ -23,12 +23,14 @@ import {QueryOptions} from "../types/query-types";
 import {MLTooltip, MLSpin, MLRadio} from "@marklogic/design-system";
 import RecordCardView from "../components/record-view/record-view";
 import SidebarFooter from "../components/sidebar-footer/sidebar-footer";
+import {useLocation} from "react-router-dom";
 
 
 interface Props extends RouteComponentProps<any> {
 }
 
-const Browse: React.FC<Props> = ({location}) => {
+const Browse: React.FC<Props> = () => {
+  const location: any = useLocation();
   const {Content, Sider} = Layout;
   const componentIsMounted = useRef(true);
   const {

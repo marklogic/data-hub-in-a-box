@@ -17,13 +17,15 @@ import DetailPageNonEntity from "../components/detail-page-non-entity/detail-pag
 import {SearchContext} from "../util/search-context";
 import {fetchQueries} from "../api/queries";
 import {AuthoritiesContext} from "../util/authorities";
+import {useLocation} from "react-router-dom";
 
 
 interface Props extends RouteComponentProps<any> { }
 
 const {Content} = Layout;
 
-const Detail: React.FC<Props> = ({history, location}) => {
+const Detail: React.FC<Props> = ({history}) => {
+  const location: any = useLocation();
   const {setSavedQueries} = useContext(SearchContext);
   const {user, handleError} = useContext(UserContext);
   const [parentPagePreferences, setParentPagePreferences] = useState({});
