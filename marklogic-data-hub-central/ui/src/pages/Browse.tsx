@@ -442,48 +442,53 @@ const Browse: React.FC<Props> = ({location}) => {
           {user.error.type === "ALERT" ?
             <AsyncLoader />
             :
+
             <>
-              {/* TODO Fix searchBar widths, it currently overlaps at narrow browser widths */}
-              <div className={styles.searchBar} ref={searchBarRef}>
-                <SearchBar entities={entities} cardView={cardView} setHubArtifactsVisibilityPreferences={setHubArtifactsVisibilityPreferences}/>
-                <SearchSummary
-                  total={totalDocuments}
-                  start={searchOptions.start}
-                  length={searchOptions.pageLength}
-                  pageSize={searchOptions.pageSize}
-                />
-                <div id="top-search-pagination-bar">
-                  <SearchPagination
+              <div className={collapse ? styles.stickyHeaderCollapsed : styles.stickyHeader}>
+                {/* TODO Fix searchBar widths, it currently overlaps at narrow browser widths */}
+                <div className={styles.searchBar} ref={searchBarRef} >
+
+                  <SearchBar entities={entities} cardView={cardView} setHubArtifactsVisibilityPreferences={setHubArtifactsVisibilityPreferences}/>
+                  <SearchSummary
                     total={totalDocuments}
-                    pageNumber={searchOptions.pageNumber}
+                    start={searchOptions.start}
+                    length={searchOptions.pageLength}
                     pageSize={searchOptions.pageSize}
-                    pageLength={searchOptions.pageLength}
-                    maxRowsPerPage={searchOptions.maxRowsPerPage}
                   />
-                </div>
-                <div className={styles.spinViews}>
-                  <div className={styles.switchViews}>
-                    {isLoading && <MLSpin data-testid="spinner" className={collapse ? styles.sideBarExpanded : styles.sideBarCollapsed} />}
-                    {!cardView ? <div id="switch-view-explorer" aria-label="switch-view" >
-                      <MLRadio.MLGroup
-                        buttonStyle="outline"
-                        name="radiogroup"
-                        size="large"
-                        defaultValue={tableView ? "table" : "snippet"}
-                        onChange={e => handleViewChange(e.target.value)}
-                      >
-                        <MLRadio.MLButton aria-label="switch-view-table" value={"table"} >
-                          <i data-cy="table-view" id={"tableView"}><MLTooltip title={"Table View"}>
-                            {<FontAwesomeIcon icon={faTable} />}
-                          </MLTooltip></i>
-                        </MLRadio.MLButton>
-                        <MLRadio.MLButton aria-label="switch-view-snippet" value={"snippet"} >
-                          <i data-cy="facet-view" id={"snippetView"}><MLTooltip title={"Snippet View"}>
-                            {<FontAwesomeIcon icon={faStream} />}
-                          </MLTooltip></i>
-                        </MLRadio.MLButton>
-                      </MLRadio.MLGroup>
-                    </div> : ""}
+                  <div id="top-search-pagination-bar">
+                    <SearchPagination
+                      total={totalDocuments}
+                      pageNumber={searchOptions.pageNumber}
+                      pageSize={searchOptions.pageSize}
+                      pageLength={searchOptions.pageLength}
+                      maxRowsPerPage={searchOptions.maxRowsPerPage}
+                    />
+                  </div>
+
+                  <div className={styles.spinViews}>
+                    <div className={styles.switchViews}>
+                      {isLoading && <MLSpin data-testid="spinner" className={collapse ? styles.sideBarExpanded : styles.sideBarCollapsed} />}
+                      {!cardView ? <div id="switch-view-explorer" aria-label="switch-view" >
+                        <MLRadio.MLGroup
+                          buttonStyle="outline"
+                          name="radiogroup"
+                          size="large"
+                          defaultValue={tableView ? "table" : "snippet"}
+                          onChange={e => handleViewChange(e.target.value)}
+                        >
+                          <MLRadio.MLButton aria-label="switch-view-table" value={"table"} >
+                            <i data-cy="table-view" id={"tableView"}><MLTooltip title={"Table View"}>
+                              {<FontAwesomeIcon icon={faTable} />}
+                            </MLTooltip></i>
+                          </MLRadio.MLButton>
+                          <MLRadio.MLButton aria-label="switch-view-snippet" value={"snippet"} >
+                            <i data-cy="facet-view" id={"snippetView"}><MLTooltip title={"Snippet View"}>
+                              {<FontAwesomeIcon icon={faStream} />}
+                            </MLTooltip></i>
+                          </MLRadio.MLButton>
+                        </MLRadio.MLGroup>
+                      </div> : ""}
+                    </div>
                   </div>
                 </div>
                 <Query queries={queries || []}
@@ -503,7 +508,7 @@ const Browse: React.FC<Props> = ({location}) => {
                 />
               </div>
               <div className={styles.viewContainer} >
-                <div className={styles.fixedView} >
+                <div>
                   {cardView ?
                     <RecordCardView
                       data={data}
@@ -511,7 +516,7 @@ const Browse: React.FC<Props> = ({location}) => {
                       selectedPropertyDefinitions={selectedPropertyDefinitions}
                     />
                     : (tableView ?
-                      <div>
+                      <div className={styles.tableViewResult}>
                         <ResultsTabularView
                           data={data}
                           entityPropertyDefinitions={entityPropertyDefinitions}
@@ -528,25 +533,28 @@ const Browse: React.FC<Props> = ({location}) => {
                     )}
                 </div>
                 <br />
-                <div>
-                  <SearchSummary
-                    total={totalDocuments}
-                    start={searchOptions.start}
-                    length={searchOptions.pageLength}
-                    pageSize={searchOptions.pageSize}
-                  />
-                  <SearchPagination
-                    total={totalDocuments}
-                    pageNumber={searchOptions.pageNumber}
-                    pageSize={searchOptions.pageSize}
-                    pageLength={searchOptions.pageLength}
-                    maxRowsPerPage={searchOptions.maxRowsPerPage}
-                  />
-                </div>
+
+              </div>
+              <div>
+                <SearchSummary
+                  total={totalDocuments}
+                  start={searchOptions.start}
+                  length={searchOptions.pageLength}
+                  pageSize={searchOptions.pageSize}
+                />
+                <SearchPagination
+                  total={totalDocuments}
+                  pageNumber={searchOptions.pageNumber}
+                  pageSize={searchOptions.pageSize}
+                  pageLength={searchOptions.pageLength}
+                  maxRowsPerPage={searchOptions.maxRowsPerPage}
+                />
               </div>
             </>
+
           }
         </Content>
+
       </Layout>
     );
   }

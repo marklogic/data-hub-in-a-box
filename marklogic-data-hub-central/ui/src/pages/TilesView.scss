@@ -36,7 +36,15 @@ div.mosaic-container div.mosaic-window-toolbar {
 }
 
 div.mosaic-container div.mosaic-window-body {
-    overflow-y: auto;
+    overflow: auto;
+}
+
+div.mosaic-container-explore div.mosaic-window-body {
+    overflow-y: hidden;
+}
+
+.ant-layout.ant-layout-has-sider > .ant-layout, .ant-layout.ant-layout-has-sider > .ant-layout-content {
+    overflow-x: scroll;
 }
 
 div.mosaic-container-load div.mosaic-tile,
