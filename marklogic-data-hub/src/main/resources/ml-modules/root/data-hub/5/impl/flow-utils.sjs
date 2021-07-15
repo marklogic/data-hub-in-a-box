@@ -719,8 +719,8 @@ function addMetadataToContent(content, flowName, stepName, jobId) {
  * @param databaseName the database to write the content objects to
  * @return An object consisting of properties "databaseName", "transactionId", and "transactionDateTime"
  */
-function writeContentArray(contentArray, databaseName) {
-  const vars = {contentArray};
+function writeContentArray(contentArray, databaseName, provenanceQueue) {
+  const vars = {contentArray, provenanceQueue};
 
   // ignoreAmps is true to prevent a user from e.g. overwriting job documents, which could be done via an amp
   const options = {

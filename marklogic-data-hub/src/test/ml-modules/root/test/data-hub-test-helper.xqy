@@ -155,6 +155,19 @@ declare function clear-jobs-database()
   )
 };
 
+declare function clear-provenance-records()
+{
+  clear-provenance-records($config:JOB-DATABASE)
+};
+
+declare function clear-provenance-records($database-name as xs:string)
+{
+  invoke-in-db(function() {
+    xdmp:collection-delete("http://marklogic.com/provenance-services/record")
+  }, $database-name
+  )
+};
+
 (:
 We want to remove everything from the schemas database except for the step response TDE
 which is added as part of the deployment process.
@@ -213,12 +226,22 @@ declare function get-modules-document($uri as xs:string)
 
 declare function get-first-prov-document()
 {
-  invoke-in-db(function() {fn:collection("http://marklogic.com/provenance-services/record")[1]}, $config:JOB-DATABASE)
+  get-first-prov-document($config:JOB-DATABASE)
+};
+
+declare function get-first-prov-document($database-name as xs:string)
+{
+  invoke-in-db(function() {fn:collection("http://marklogic.com/provenance-services/record")[1]}, $database-name)
 };
 
 declare function get-prov-documents()
 {
-  invoke-in-db(function() {fn:collection("http://marklogic.com/provenance-services/record")}, $config:JOB-DATABASE)
+  get-prov-documents($config:JOB-DATABASE)
+};
+
+declare function get-prov-documents($database-name as xs:string)
+{
+  invoke-in-db(function() {fn:collection("http://marklogic.com/provenance-services/record")}, $database-name)
 };
 
 declare function get-final-schema($uri as xs:string)

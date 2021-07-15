@@ -19,6 +19,7 @@ const Artifacts = require('/data-hub/5/artifacts/core.sjs');
 const Batch = require("/data-hub/5/flow/batch.sjs");
 const defaultConfig = require("/com.marklogic.hub/config.sjs")
 const flowProvenance = require("/data-hub/5/flow/flowProvenance.sjs");
+const provLib = require("/data-hub/5/impl/prov.sjs");
 const flowRunner = require("/data-hub/5/flow/flowRunner.sjs");
 const hubUtils = require("/data-hub/5/impl/hub-utils.sjs");
 const jobs = require("/data-hub/5/impl/jobs.sjs");
@@ -195,18 +196,23 @@ class Flow {
       throw error;
     }
 
+    // Queueing the provenance here so it is available to write with the documents starting in 5.7
+    if (stepExecutionContext.provenanceIsEnabled()) {
+      flowProvenance.queueProvenanceData(stepExecutionContext, outputContentArray);
+    }
     let writeTransactionInfo = {};
     if (stepExecutionContext.stepOutputShouldBeWritten()) {
       try {
         const contentToWrite = writeQueue.getContentArray(stepExecutionContext.getTargetDatabase());
-        writeTransactionInfo = this.flowUtils.writeContentArray(contentToWrite, stepExecutionContext.getTargetDatabase());
+        writeTransactionInfo = this.flowUtils.writeContentArray(contentToWrite, stepExecutionContext.getTargetDatabase(), provLib.getProvenanceWriteQueue());
       } catch (e) {
         this.handleWriteError(writeQueue, stepExecutionContext, e);
       }
     }
 
+    // This handles committing provenance to the JOBS db prior to 5.7
     if (stepExecutionContext.provenanceIsEnabled()) {
-      flowProvenance.writeProvenanceData(stepExecutionContext, outputContentArray);
+      provLib.commit();
     }
 
     this.writeBatchDocumentIfEnabled(stepExecutionContext, jobDoc, batchItems, writeTransactionInfo);

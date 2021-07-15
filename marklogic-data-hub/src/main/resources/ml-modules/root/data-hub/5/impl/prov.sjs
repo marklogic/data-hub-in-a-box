@@ -20,9 +20,13 @@ const hubES = require("/data-hub/5/impl/hub-es.sjs");
 const hubUtils = require("/data-hub/5/impl/hub-utils.sjs");
 const ps = require('/MarkLogic/provenance');
 const op = require('/MarkLogic/optic');
-const StepExecutionContext = require("/data-hub/5/flow/stepExecutionContext.sjs");
+const ProvenanceWriteQueue = require("/data-hub/5/provenance/provenanceWriteQueue.sjs");
 
-let commitQueue = [];
+const provenanceWriteQueue = new ProvenanceWriteQueue();
+
+function getProvenanceWriteQueue() {
+  return provenanceWriteQueue;
+}
 
 function newProvId(jobId, flowId, stepType, docUri) {
   return `${jobId + flowId + stepType + docUri}_${sem.uuidString()}`;
@@ -138,65 +142,33 @@ function validateCreateStepParams(jobId, flowId, stepName, stepDefinitionName, s
  * attributes, dateTime & namespaces info each record requires.
  * @param {Array} recordsQueue - array of objects with identifier of this provenance information, options, and metadata
  */
-function createRecords(recordsQueue) {
+function createRecords(recordsQueue, latestProvenance = false) {
   xdmp.eval(`
-      declareUpdate();
-      const ps = require('/MarkLogic/provenance');
-      xdmp.securityAssert("http://marklogic.com/xdmp/privileges/ps-user", "execute");
-
-      for (let recordDetails of recordsQueue) {
-        let options = recordDetails.options || {};
-        options.dateTime = String(fn.currentDateTime());
-        // namespaces for user defined provenance types
-        options.namespaces = { 
-          dhf:"http://marklogic.com/dhf", 
-          job:"http://marklogic.com/data-hub/job#",
-          step:"http://marklogic.com/data-hub/step#",
-          user:"http://marklogic.com/data-hub/user#",
-          dh:"http://marklogic.com/data-hub/provenance#"
-        }; 
-
-        // relations
-        options.relations = options.relations || {};
-        options.relations.attributedTo = options.relations.attributedTo || xdmp.getCurrentUser();
-
-        // attributes
-        options.attributes = options.attributes || {};
-
-        let metadata = recordDetails.metadata || {};
-        if (metadata)
-            Object.assign(options.attributes, metadata)
-
-        let record = ps.provenanceRecord(fn.replace(recordDetails.id,"%%dateTime%%", options.dateTime), options);
-        ps.provenanceRecordInsert(record);
-      }
-      `,
-    { recordsQueue },
+    declareUpdate();
+    recordsQueue.persist();
+    `,
+    {recordsQueue},
     {
       database: xdmp.database(config.JOBDATABASE),
       commit: 'auto',
       update: 'true',
       ignoreAmps: true
     });
-  return recordsQueue.map((recordDetails) => recordDetails.id);
+  return recordsQueue.getDatabaseQueue(consts.JOBDATABASE).map((recordDetails) => recordDetails.id);
 };
 
 /**
  * General function for adding to the commit queue
+ * @param {string} database - the database that the provenance record should be queued for
  * @param {string} id - the identifier of this provenance information
  * @param {Object} options - provenance record options (see individual type requirements below)
  * @param {Object} metadata - provenance record metadata
  */
-function queueForCommit(id, options, metadata) {
+function queueForCommit(databaseName = config.JOBDATABASE, id, options, metadata) {
   if (xdmp.traceEnabled(consts.TRACE_FLOW_DEBUG)) {
     hubUtils.hubTrace(consts.TRACE_FLOW_DEBUG, `Queueing provenance record with ID: ${id}`);
   }
-  let existingForId = commitQueue.find((recordDetails) => recordDetails.id === id);
-  if (existingForId) {
-    Object.assign(existingForId, { id, options, metadata });
-  } else {
-    commitQueue.push({ id, options, metadata });
-  }
+  provenanceWriteQueue.addProvenanceRecord(databaseName, {id, options, metadata});
 };
 
 /**
@@ -237,7 +209,7 @@ function createIngestionStepRecord(jobId, flowId, stepName, stepDefinitionName, 
     attributes: { location: docURI }
   };
 
-  return queueForCommit(provId, recordOpts, info.metadata);
+  return queueForCommit(config.JOBDATABASE, provId, recordOpts, info.metadata);
 }
 
 /**
@@ -280,7 +252,7 @@ function createMappingStepRecord(jobId, flowId, stepName, stepDefinitionName, do
     attributes: { location: docURI }
   };
 
-  return queueForCommit(provId, recordOpts, info.metadata);
+  return queueForCommit(config.JOBDATABASE, provId, recordOpts, info.metadata);
 }
 
 /**
@@ -323,7 +295,7 @@ function createMasteringStepRecord(jobId, flowId, stepName, stepDefinitionName, 
     attributes: { location: docURI }
   };
 
-  return queueForCommit(provId, recordOpts, info.metadata);
+  return queueForCommit(config.JOBDATABASE, provId, recordOpts, info.metadata);
 }
 
 /**
@@ -366,7 +338,7 @@ function createMatchingStepRecord(jobId, flowId, stepName, stepDefinitionName, d
     attributes: { location: docURI }
   };
 
-  return queueForCommit(provId, recordOpts, info.metadata);
+  return queueForCommit(config.JOBDATABASE, provId, recordOpts, info.metadata);
 }
 
 /**
@@ -409,7 +381,7 @@ function createMergingStepRecord(jobId, flowId, stepName, stepDefinitionName, do
     attributes: { location: docURI }
   };
 
-  return queueForCommit(provId, recordOpts, info.metadata);
+  return queueForCommit(config.JOBDATABASE, provId, recordOpts, info.metadata);
 }
 
 /**
@@ -451,8 +423,17 @@ function createCustomStepRecord(jobId, flowId, stepName, stepDefinitionName, doc
     attributes: { location: docURI }
   };
 
-  return queueForCommit(provId, recordOpts, info.metadata);
+  return queueForCommit(config.JOBDATABASE, provId, recordOpts, info.metadata);
 }
+
+const stepRecordCreationFunctions = {
+  createIngestionStepRecord,
+  createCustomStepRecord,
+  createMappingStepRecord,
+  createMasteringStepRecord,
+  createMatchingStepRecord,
+  createMergingStepRecord
+};
 
 /**
  * @desc Create a provenance record when a document is run through a Flow step
@@ -473,7 +454,7 @@ function createStepRecord(jobId, flowId, stepName, stepDefinitionName, stepDefin
   let isValid = validateCreateStepParams(jobId, flowId, stepName, stepDefinitionName, stepDefinitionType, docURI, info);
   if (!(isValid instanceof Error)) {
     let capitalizedStepType = hubUtils.capitalize(stepDefinitionType);
-    resp = eval('create' + capitalizedStepType + 'StepRecord' + '(jobId, flowId, stepName, stepDefinitionName, docURI, info)');
+    resp = stepRecordCreationFunctions["create" + capitalizedStepType + "StepRecord"](jobId, flowId, stepName, stepDefinitionName, docURI, info);
   } else {
     resp = isValid
   }
@@ -524,7 +505,7 @@ function createStepPropertyRecords(jobId, flowId, stepName, stepDefinitionName, 
         // append to return Object
         docPropertyProvIds[property] = docPropProvId;
         docPropertyProvIdsArray.push(docPropProvId);
-        queueForCommit(docPropProvId, docPropProvOptions, info.metadata);
+        queueForCommit(config.JOBDATABASE, docPropProvId, docPropProvOptions, info.metadata);
       }
 
       // create document record
@@ -541,7 +522,7 @@ function createStepPropertyRecords(jobId, flowId, stepName, stepDefinitionName, 
         attributes: { location: docURI }
       };
 
-      queueForCommit(docProvId, recordOpts, info.metadata);
+      queueForCommit(config.JOBDATABASE, docProvId, recordOpts, info.metadata);
 
       // construct response
       resp = [docProvId, docPropertyProvIds];
@@ -597,7 +578,7 @@ function createStepPropertyAlterationRecord(jobId, flowId, stepName, stepDefinit
           influencedBy: info && info.influencedBy,
         }
       };
-      queueForCommit(provId, recordOpts, info.metadata);
+      queueForCommit(config.JOBDATABASE, provId, recordOpts, info.metadata);
 
       resp = provId;
     } else {
@@ -643,7 +624,7 @@ function createStepDocumentAlterationRecord(jobId, flowId, stepName, stepDefinit
         },
         attributes: { location: newDocURI }
       };
-      queueForCommit(provId, recordOpts, info.metadata);
+      queueForCommit(config.JOBDATABASE, provId, recordOpts, info.metadata);
       resp = provId;
     } else {
       resp = new Error(`Function requires param 'documentProvIds' & 'alteredPropertyProvIds' to be defined.`);
@@ -655,10 +636,10 @@ function createStepDocumentAlterationRecord(jobId, flowId, stepName, stepDefinit
 }
 
 function commit() {
-  if (commitQueue.length > 0) {
-    hubUtils.hubTrace(consts.TRACE_FLOW, `Committing provenance records, count: ${commitQueue.length}`);
-    createRecords(commitQueue);
-    commitQueue = [];
+  const jobsProvenanceQueue = provenanceWriteQueue.getDatabaseQueue(config.JOBDATABASE);
+  if (jobsProvenanceQueue.length > 0) {
+    hubUtils.hubTrace(consts.TRACE_FLOW, `Committing provenance records, count: ${jobsProvenanceQueue.length}`);
+    createRecords(provenanceWriteQueue);
   } else {
     hubUtils.hubTrace(consts.TRACE_FLOW, `No provenance records were queued, so not committing any to the jobs database`);
   }
@@ -719,7 +700,7 @@ function queueSourceProvenance(sourceLabel, stepExecutionContext, sourceProvIDs)
     }
   };
   sourceProvIDs.push(sourceProvID);
-  queueForCommit(sourceProvID, sourceRecordOptions, {});
+  queueForCommit(stepExecutionContext.getTargetDatabase(), sourceProvID, sourceRecordOptions, {});
 }
 
 function buildRecordEntity(stepExecutionContext, contentObject, hadMember, info) {
@@ -761,12 +742,13 @@ function buildRecordEntity(stepExecutionContext, contentObject, hadMember, info)
       influencedBy
     }
   };
-  queueForCommit(provId, recordOpts, info.metadata);
+  queueForCommit(stepExecutionContext.getTargetDatabase(), provId, recordOpts, info.metadata);
   resp.push(provId);
   return resp;
 }
 
 module.exports = {
+  getProvenanceWriteQueue,
   buildRecordEntity,
   commit,
   createStepDocumentAlterationRecord,

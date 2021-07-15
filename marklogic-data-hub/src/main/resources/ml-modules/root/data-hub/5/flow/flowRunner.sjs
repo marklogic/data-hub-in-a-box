@@ -421,7 +421,6 @@ function finishFlowExecution(flowExecutionContext, writeQueue) {
       hubUtils.error(`Unable to persist content for ${flowExecutionContext.describe()}`, error);
       flowExecutionContext.addFlowError(error);
     }
-
     try {
       provLib.commit();
     } catch (error) {

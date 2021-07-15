@@ -19,6 +19,8 @@ declareUpdate();
 
 // The array of content objects to write
 var contentArray;
+// provenanceQueue to persist;
+var provenanceQueue;
 
 const consts = require("/data-hub/5/impl/consts.sjs");
 const hubUtils = require("/data-hub/5/impl/hub-utils.sjs");
@@ -97,4 +99,7 @@ const writeInfo = {
   transactionDateTime: fn.currentDateTime()
 };
 
+if (provenanceQueue) {
+  provenanceQueue.persist();
+}
 writeInfo;
