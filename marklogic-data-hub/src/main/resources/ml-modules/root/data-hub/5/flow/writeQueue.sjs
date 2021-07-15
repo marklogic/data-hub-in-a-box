@@ -18,6 +18,7 @@
 const consts = require("/data-hub/5/impl/consts.sjs");
 const flowUtils = require("/data-hub/5/impl/flow-utils.sjs");
 const hubUtils = require("/data-hub/5/impl/hub-utils.sjs");
+const provLib = require("/data-hub/5/impl/prov.sjs");
 
 /**
  * Captures the content objects that should be written to a database after one or more steps
@@ -97,7 +98,7 @@ class WriteQueue {
   persist() {
     const writeInfos = [];
     Object.keys(this.databaseToContentMap).forEach(databaseName => {
-      writeInfos.push(flowUtils.writeContentArray(this.getContentArray(databaseName), databaseName));
+      writeInfos.push(flowUtils.writeContentArray(this.getContentArray(databaseName), databaseName, provLib.getProvenanceWriteQueue()));
     });
     return writeInfos;
   }

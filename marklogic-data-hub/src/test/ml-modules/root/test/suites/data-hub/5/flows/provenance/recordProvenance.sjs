@@ -1,9 +1,12 @@
 declareUpdate();
-// This tests provenance planned for teh 5.7.0 release
+// This tests provenance planned for the 5.7.0 release
+const config = require("/com.marklogic.hub/config.sjs");
 const test = require("/test/test-helper.xqy");
 const hubTest = require("/test/data-hub-test-helper.xqy");
 const flowProvenance = require("/data-hub/5/flow/flowProvenance.sjs");
 const StepExecutionContext = require("/data-hub/5/flow/stepExecutionContext.sjs");
+const provLib = require("/data-hub/5/impl/prov.sjs");
+const stagingDB = config.STAGINGDATABASE;
 const assertions = [];
 
 function assertValidEntityInstanceProvenance(provDocument) {
@@ -44,7 +47,8 @@ const fakeFlow = {
 };
 
 let provDocument;
-let stepExecutionContext = new StepExecutionContext(fakeFlow, "1", {name:"myCustomStep", type: "custom"}, "my-job-id", { latestProvenance: true, targetDatabase: "data-hub-STAGING" });
+let stepExecutionContext = new StepExecutionContext(fakeFlow, "1", {name:"myCustomStep", type: "custom"}, "my-job-id", { latestProvenance: true, targetDatabase: stagingDB });
+let provenanceWriteQueue = provLib.getProvenanceWriteQueue();
 
 // test JSON Object entity instance
 stepExecutionContext.completedItems = ["testJSONObjectInstance.json"];
@@ -52,30 +56,32 @@ flowProvenance.writeProvenanceData(stepExecutionContext, [
   {uri: "testJSONObjectInstance.json", value: { envelope:{ instance: { info: { title: "Customer", version: "0.0.1"}}}}}
 ]);
 
+provenanceWriteQueue.persist(stagingDB);
 
-provDocument = hubTest.getFirstProvDocument();
+provDocument = hubTest.getFirstProvDocument(stagingDB);
 assertValidEntityInstanceProvenance(provDocument);
 assertions.push(test.assertEqual("testJSONObjectInstance.json", fn.string(provDocument.xpath("*:document/*:entity/documentURI")),
   "The document URI 'testJSONObjectInstance.json' should be captured."
 ));
 assertValidRelationshipProvenance(provDocument);
-hubTest.clearJobsDatabase();
+hubTest.clearProvenanceRecords(stagingDB);
 
 // test JSON Node entity instance
 stepExecutionContext.completedItems = ["testJSONNodeInstance.json"];
 flowProvenance.writeProvenanceData(stepExecutionContext, [
   {uri: "testJSONNodeInstance.json", value: xdmp.toJSON({ envelope:{ instance: {info: { title: "Customer", version: "0.0.1"}}}})}
 ]);
+provenanceWriteQueue.persist(stagingDB);
 
 
-provDocument = hubTest.getFirstProvDocument();
+provDocument = hubTest.getFirstProvDocument(stagingDB);
 assertValidEntityInstanceProvenance(provDocument);
 assertions.push(test.assertEqual("testJSONNodeInstance.json", fn.string(provDocument.xpath("*:document/*:entity/documentURI")),
   "The document URI 'testJSONNodeInstance.json' should be captured."
 ));
 assertValidRelationshipProvenance(provDocument);
 
-hubTest.clearJobsDatabase();
+hubTest.clearProvenanceRecords(stagingDB);
 
 // test XML entity instance
 stepExecutionContext.completedItems = ["testXMLInstance.xml"];
@@ -90,15 +96,15 @@ flowProvenance.writeProvenanceData(stepExecutionContext, [
         </instance>
       </envelope>`))}
 ]);
+provenanceWriteQueue.persist(stagingDB);
 
-
-provDocument = hubTest.getFirstProvDocument();
+provDocument = hubTest.getFirstProvDocument(stagingDB);
 assertValidEntityInstanceProvenance(provDocument);
 assertions.push(test.assertEqual("testXMLInstance.xml", fn.string(provDocument.xpath("*:document/*:entity/documentURI")),
   "The document URI 'testXMLInstance.xml' should be captured."
 ));
 assertValidRelationshipProvenance(provDocument);
 
-hubTest.clearJobsDatabase();
+hubTest.clearProvenanceRecords(stagingDB);
 
 assertions;
