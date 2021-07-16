@@ -4,6 +4,7 @@ import "./graph-vis.scss";
 import ReactDOMServer from "react-dom/server";
 import { faFileExport, faTrashAlt, faAddressBook, faAmbulance } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import NodeSvg from "./node-svg";
 
 type Props = {
   entityTypes: any;
@@ -145,7 +146,9 @@ const GraphVis: React.FC<Props> = (props) => {
   }
   const getNodeImage = (entityName) => {
     //var url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(ReactDOMServer.renderToString(getNodeSVGJSX(entityName)));//getEncodedSvg(e);
-    var url = "data:image/svg+xml;charset=utf-8," + getEncodedSvg(entityName);
+    const node = new NodeSvg(entityName, entityMetadata[entityName].color, entityMetadata[entityName].instances, getLabelIcon(entityName));
+    //var url = "data:image/svg+xml;charset=utf-8," + getEncodedSvg(entityName);
+    var url = "data:image/svg+xml;charset=utf-8," + node.getNode();
     return url;
   }
 
