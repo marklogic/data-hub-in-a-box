@@ -13,6 +13,7 @@
 - [ ] Squashed all commits into a single commit
 - [ ] Code passes ESLint tests
 - [ ] Added Tests
+- [ ] Run UI tests
   
 
 - ##### Reviewer:
